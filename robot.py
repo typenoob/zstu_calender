@@ -4,22 +4,33 @@ from selenium.webdriver.chrome.options import Options
 import time
 from hashlib import md5
 from datetime import datetime, timedelta
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+import sys
 
 try:
-opt = Options()
-opt.add_argument('--headless')
-opt.add_argument('--disable-gpu')
-opt.add_argument('--no-sandbox')
-opt.add_argument('disable-dev-shm-usage')
-browser = webdriver.Chrome(options=opt)
-browser.implicitly_wait(30)
-js = open('./login.js', 'r',).read()
-browser.get('http://jwglxt.zstu.edu.cn/jwglxt/xtgl/login_slogin.html')
-time.sleep(0.5)
-browser.execute_script(js)
-time.sleep(0.5)
-result = browser.get_cookies()
-result = (result[0]['value'], result[1]['value'])
+    opt = Options()
+    opt.add_argument('--headless')
+    opt.add_argument('--disable-gpu')
+    opt.add_argument('--no-sandbox')
+    opt.add_argument('disable-dev-shm-usage')
+    browser = webdriver.Chrome(options=opt)
+    browser.implicitly_wait(5)
+    js = open('./login.js', 'r',).read()
+    browser.get('http://jwglxt.zstu.edu.cn/jwglxt/xtgl/login_slogin.html')
+    browser.find_element(By.CLASS_NAME,'footer')
+    time.sleep(0.1)
+    browser.execute_script(js)
+    browser.find_element(By.ID,'requestMap')
+    time.sleep(0.1)
+    result = browser.get_cookies()
+    result = (result[0]['value'], result[1]['value'])
+except NoSuchElementException:
+    print('User Or Password Wrong!')
+    browser.quit()
+    sys.exit()
+finally:
+    browser.quit()
 url = 'http://jwglxt.zstu.edu.cn/jwglxt/kbcx/xskbcx_cxXsgrkb.html'
 headers = {"Host": "jwglxt.zstu.edu.cn",
            "Connection": "keep-alive",
@@ -37,7 +48,7 @@ headers = {"Host": "jwglxt.zstu.edu.cn",
            }
 headers['Cookie'] = 'JSESSIONID={js};route={rt}'.format(
     rt=result[0], js=result[1])
-data = {"xnm": "2021", "xqm": "3", "kzlx": "ck"}
+data = {"xnm": "2021", "xqm": "2", "kzlx": "ck"}
 true = True
 false = False
 requ = requests.post(url=url, headers=headers, data=data)
@@ -124,3 +135,5 @@ iCal += "END:VCALENDAR"
 
 with open("cqupt.ics", "w", encoding="utf-8") as w:
     w.write(iCal)
+
+print('successful!')
