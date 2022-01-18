@@ -5,6 +5,7 @@ from Crypto.Util import Padding
 from base64 import b64encode, b64decode
 from requests import Session
 from re import compile
+import json
 
 
 class ZstuSso:
@@ -50,7 +51,7 @@ class ZstuSso:
 def get_course_list() -> list:
     true = True
     false = False
-    t = ZstuSso("sno", "password")
+    t = ZstuSso(config['sno'], config['password'])
     t.login()
     s = t.get_session()
     url = 'https://sso.zstu.edu.cn/login?service=http:%2F%2Fjwglxt.zstu.edu.cn%2Fsso%2Fjasiglogin'
@@ -140,6 +141,9 @@ def make_ics(lst, year=2022, month=2, day=21) -> str:
         w.write(iCal)
 
     return('successful!')
+
+
+config = json.load(open('config.json', encoding='utf-8'))
 
 
 def main():
