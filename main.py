@@ -71,16 +71,15 @@ def make_ics(lst, year=2022, month=2, day=21) -> str:
 
     def rgWeek(startWeek, endWeek): return [
         i for i in range(startWeek, endWeek + 1)]
-    map = {'星期一': 1, '星期二': 2, '星期三': 3,
-           '星期四': 4, '星期五': 5, '星期六': 6, '星期日': 7}
+    convert = {'星期一': 1, '星期二': 2, '星期三': 3,
+               '星期四': 4, '星期五': 5, '星期六': 6, '星期日': 7}
     for course in lst:
-        start = int(course['zcd'][0:course['zcd'].find('-')])
-        end = int(course['zcd'][course['zcd'].find('-')+1:-1])
+        start, end = map(int, compile('\d+').findall(course['zcd']))
         span = course['jcs']
         jcs = list(range(int(span[0:span.find('-')]),
                          int(span[span.find('-')+1:])+1))
         classes.append([course['kcmc'], course['xm'], course['cd_id'],
-                        "", rgWeek(start, end), map[course['xqjmc']], jcs])
+                        "", rgWeek(start, end), convert[course['xqjmc']], jcs])
     classTime = [None, (8, 10), (9, 5),  (10, 0),
                  (10, 55),  (11, 50),  (13, 30), (14, 25), (15, 20), (16, 50), (19, 15), (20, 10), (21, 5)]
     weeks = [None]
