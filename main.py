@@ -67,12 +67,17 @@ def get_course_list() -> list:
 
 
 def make_ics(lst, year=2022, month=2, day=21) -> str:
-    classes = []
+    def oeWeek(startWeek, endWeek, mode): return [
+        i for i in range(startWeek, endWeek + 1) if (i + mode) % 2 == 0]
 
     def rgWeek(startWeek, endWeek): return [
         i for i in range(startWeek, endWeek + 1)]
+
+    def uid_generate(key1, key2): return md5(
+        f"{key1}{key2}".encode("utf-8")).hexdigest()
     convert = {'星期一': 1, '星期二': 2, '星期三': 3,
                '星期四': 4, '星期五': 5, '星期六': 6, '星期日': 7}
+    classes = []
     for course in lst:
         start, end = map(int, compile('\d+').findall(course['zcd']))
         span = course['jcs']
@@ -91,28 +96,24 @@ def make_ics(lst, year=2022, month=2, day=21) -> str:
             starterDay += timedelta(days=1)
         weeks.append(singleWeek)
 
-    def uid_generate(key1, key2): return md5(
-        f"{key1}{key2}".encode("utf-8")).hexdigest()
-
     iCal = """BEGIN:VCALENDAR
-    METHOD:PUBLISH
-    VERSION:2.0
-    X-WR-CALNAME:课表
-    X-WR-TIMEZONE:Asia/Shanghai
-    CALSCALE:GREGORIAN
-    BEGIN:VTIMEZONE
-    TZID:Asia/Shanghai
-    END:VTIMEZONE
-    """
+METHOD:PUBLISH
+VERSION:2.0
+X-WR-CALNAME:课表
+X-WR-TIMEZONE:Asia/Shanghai
+CALSCALE:GREGORIAN
+BEGIN:VTIMEZONE
+TZID:Asia/Shanghai
+END:VTIMEZONE
+"""
 
     runtime = datetime.now().strftime('%Y%m%dT%H%M%SZ')
-
     for Class in classes:
         [Name, Teacher, Location, classID, classWeek,
             classWeekday, classOrder] = Class[:]
         Title = Name + " - " + Location
 
-        customGEO = "LOCATION:理工教学楼？找得到的吧"  # 通过 geo_location 匹配，也可替换为其他文本
+        customGEO = 'location'  # 通过 geo_location 匹配，也可替换为其他文本
 
         for timeWeek in classWeek:
             classDate = weeks[timeWeek][classWeekday]
@@ -127,15 +128,15 @@ def make_ics(lst, year=2022, month=2, day=21) -> str:
             StartTime = classStartTime.strftime('%Y%m%dT%H%M%S')
             EndTime = classEndTime.strftime('%Y%m%dT%H%M%S')
             singleEvent = f"""BEGIN:VEVENT
-    DTEND;TZID=Asia/Shanghai:{EndTime}
-    DESCRIPTION:{Description}
-    UID:CQUPT-{uid_generate(Name, StartTime)}
-    DTSTAMP:{runtime}
-    URL;VALUE=URI:{customGEO}
-    SUMMARY:{Title}
-    DTSTART;TZID=Asia/Shanghai:{StartTime}
-    END:VEVENT
-    """
+DTEND;TZID=Asia/Shanghai:{EndTime}
+DESCRIPTION:{Description}
+UID:CQUPT-{uid_generate(Name, StartTime)}
+DTSTAMP:{runtime}
+URL;VALUE=URI:{customGEO}
+SUMMARY:{Title}
+DTSTART;TZID=Asia/Shanghai:{StartTime}
+END:VEVENT
+"""
             iCal += singleEvent
 
     iCal += "END:VCALENDAR"
