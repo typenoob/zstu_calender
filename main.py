@@ -1,66 +1,78 @@
-import requests
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import time
 from hashlib import md5
 from datetime import datetime, timedelta
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from Crypto.Cipher import DES
+from Crypto.Util import Padding
+from base64 import b64encode, b64decode
+from requests import Session
+from re import compile
+import json
+import sys
 
 
-def main(year=2022, month=2, day=28):
-    opt = Options()
-    opt.add_argument('--headless')
-    opt.add_argument('--disable-gpu')
-    opt.add_argument('--no-sandbox')
-    opt.add_argument('disable-dev-shm-usage')
-    browser = webdriver.Chrome(options=opt)
-    try:
-        browser.implicitly_wait(5)
-        js = open('./login.js', 'r',).read()
-        browser.get('http://jwglxt.zstu.edu.cn/jwglxt/xtgl/login_slogin.html')
-        browser.find_element(By.CLASS_NAME, 'footer')
-        time.sleep(0.1)
-        browser.execute_script(js)
-        browser.find_element(By.ID, 'requestMap')
-        time.sleep(0.1)
-        result = browser.get_cookies()
-        result = (result[0]['value'], result[1]['value'])
-    except NoSuchElementException:
-        browser.quit()
-        return('User Or Password Wrong!')
-    finally:
-        browser.quit()
-    url = 'http://jwglxt.zstu.edu.cn/jwglxt/kbcx/xskbcx_cxXsgrkb.html'
-    headers = {"Host": "jwglxt.zstu.edu.cn",
-               "Connection": "keep-alive",
-               "Content-Length": "22",
-               "Accept": "*/*",
-               "X-Requested-With": "XMLHttpRequest",
-               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36 Edg/96.0.1054.41",
-               "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-               "Origin": "http://jwglxt.zstu.edu.cn",
-               "Referer": "http://jwglxt.zstu.edu.cn/jwglxt/kbcx/xskbcx_cxXskbcxIndex.html",
-               "Accept-Encoding": "gzip, deflate",
-               "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-               "Cookie": "JSESSIONID="
+class ZstuSso:
+    def __init__(self, username: str, password: str) -> None:
+        self.__username = username
+        self.__password = password
+        self.__session = Session()
 
-               }
-    headers['Cookie'] = 'JSESSIONID={js};route={rt}'.format(
-        rt=result[0], js=result[1])
-    data = {"xnm": "2021", "xqm": "2", "kzlx": "ck"}
+    def login(self) -> Session:
+        login_url = 'https://sso.zstu.edu.cn/login'
+        res = self.__session.get(login_url).text
+        execution, croypto = self.__get_execution_and_crypto(res)
+        payload = \
+            {
+                'username': self.__username,
+                'type': 'UsernamePassword',
+                '_eventId': 'submit',
+                'geolocation': '',
+                'execution': execution,
+                'captcha_code': '',
+                'croypto': croypto,
+                'password': self.__encrypto_password(croypto),
+            }
+        res = self.__session.post(login_url, payload, allow_redirects=False)
+        if len(res.content) != 0:
+            return None
+        else:
+            return self.__session
+
+    def get_session(self):
+        return self.__session
+
+    def __get_execution_and_crypto(self, data: str):
+        execution_pat = compile('<p id="login-page-flowkey">(.*?)</p>')
+        crypto_pat = compile('<p id="login-croypto">(.*?)</p>')
+        return execution_pat.search(data).group(1), crypto_pat.search(data).group(1)
+
+    def __encrypto_password(self, key: str) -> str:
+        key = b64decode(key)
+        enc = DES.new(key, DES.MODE_ECB)
+        data = Padding.pad(self.__password.encode('utf-8'), 16)
+        return b64encode(enc.encrypt(data))
+
+
+def get_course_list() -> list:
     true = True
     false = False
-    requ = requests.post(url=url, headers=headers, data=data)
-    lst = eval(requ.text)['kbList']
+    t = ZstuSso(config['sno'], config['password'])
+    if not t.login():
+        return None
+    s = t.get_session()
+    url = 'https://sso.zstu.edu.cn/login?service=http:%2F%2Fjwglxt.zstu.edu.cn%2Fsso%2Fjasiglogin'
+    s.get(url)
+    url = 'http://jwglxt.zstu.edu.cn/jwglxt/kbcx/xskbcx_cxXsgrkb.html'
+    data = {"xnm": "2021", "xqm": "12", "kzlx": "ck"}
+    r = s.post(url, data)
+    return eval(r.text)['kbList']
+
+
+def make_ics(lst, year=2022, month=2, day=21) -> str:
     classes = []
 
     def rgWeek(startWeek, endWeek): return [
         i for i in range(startWeek, endWeek + 1)]
-
     map = {'星期一': 1, '星期二': 2, '星期三': 3,
            '星期四': 4, '星期五': 5, '星期六': 6, '星期日': 7}
-
     for course in lst:
         start = int(course['zcd'][0:course['zcd'].find('-')])
         end = int(course['zcd'][course['zcd'].find('-')+1:-1])
@@ -69,7 +81,6 @@ def main(year=2022, month=2, day=28):
                          int(span[span.find('-')+1:])+1))
         classes.append([course['kcmc'], course['xm'], course['cd_id'],
                         "", rgWeek(start, end), map[course['xqjmc']], jcs])
-
     classTime = [None, (8, 10), (9, 5),  (10, 0),
                  (10, 55),  (11, 50),  (13, 30), (14, 25), (15, 20), (16, 50), (19, 15), (20, 10), (21, 5)]
     weeks = [None]
@@ -134,6 +145,24 @@ def main(year=2022, month=2, day=28):
         w.write(iCal)
 
     return('successful!')
+
+
+def main():
+    global config
+    config = json.load(open('config.json', encoding='utf-8'))
+    if config['date']:
+        date = datetime.strptime(config['date'], '%Y-%m-%d')
+        courses = get_course_list()
+        if courses:
+            return make_ics(courses, date.year, date.month, date.day)
+        else:
+            return "登录失败！请确认用户名密码是否正确"
+    else:
+        courses = get_course_list()
+        if courses:
+            return make_ics(courses)
+        else:
+            return "登录失败！请确认用户名密码是否正确"
 
 
 if __name__ == "__main__":

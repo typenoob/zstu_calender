@@ -4,9 +4,18 @@
     <form action="login" method="post">
         <p><input type="text" name="xh" placeholder="学号" /></p>
         <p><input type="password" name="mm" placeholder="密码" /></p>
-        <p><input type="date" name="dt" />选择下学期第一周第一天日期（默认2.28）</p>
+        <p><input type="date" name="dt" />选择下学期第一周第一天日期（默认2.21）</p>
         <p><input type="submit" value="导出至日历" /></p>
     </form>
+    <div class="warning">
+        {% for message in get_flashed_messages() %}
+        <div class="alert alert-warning alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                    aria-hidden="true">&times;</span></button>
+            <strong>Warning!</strong> {{ message }}
+        </div>
+        {% endfor %}
+    </div>
 </body>
 
 </html>
