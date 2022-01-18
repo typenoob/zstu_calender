@@ -6,7 +6,6 @@ from base64 import b64encode, b64decode
 from requests import Session
 from re import compile
 import json
-import sys
 
 
 class ZstuSso:
@@ -57,6 +56,7 @@ def get_course_list() -> list:
     t = ZstuSso(config['sno'], config['password'])
     if not t.login():
         return None
+
     s = t.get_session()
     url = 'https://sso.zstu.edu.cn/login?service=http:%2F%2Fjwglxt.zstu.edu.cn%2Fsso%2Fjasiglogin'
     s.get(url)
